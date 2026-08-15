@@ -20,9 +20,9 @@
 
       <div class="course-switcher">
         <span class="eyebrow">Current course</span>
-        <button class="course-button" type="button">
-          <span class="course-monogram">PS</span>
-          <span class="course-name"><strong>PSY 201</strong><small>Cognitive Psychology</small></span>
+        <button class="course-button" id="courseButton" type="button" aria-haspopup="dialog">
+          <span class="course-monogram" id="courseMonogram">PS</span>
+          <span class="course-name"><strong id="courseCode">PSY 201</strong><small id="courseName">Cognitive Psychology</small></span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
       </div>
@@ -31,11 +31,6 @@
         <a class="nav-item active" href="#chat" data-view="chat" aria-current="page">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></svg>
           Ask CourseGuide
-        </a>
-        <a class="nav-item" href="#materials" data-view="materials">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
-          Course materials
-          <span class="count">18</span>
         </a>
         <a class="nav-item" href="#saved" data-view="saved">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
@@ -53,7 +48,7 @@
         <div class="trust-icon">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V5l8-3 8 3z"/><path d="m9 12 2 2 4-4"/></svg>
         </div>
-        <div><strong>Instructor verified</strong><p>Answers use only materials approved by Dr. Chen.</p></div>
+        <div><strong>Instructor verified</strong><p id="trustText">Answers use only evidence approved for student responses.</p></div>
       </div>
 
       <div class="profile">
@@ -81,7 +76,7 @@
       <section class="conversation" aria-live="polite">
         <div class="welcome" id="welcome">
           <div class="welcome-mark">C</div>
-          <p class="kicker">PSY 201 · FALL 2026</p>
+          <p class="kicker" id="courseKicker">PSY 201 · FALL 2026</p>
           <h1>What can I help you understand?</h1>
           <p class="intro">Ask about course concepts, assignments, policies, or deadlines. Every answer is grounded in your instructor’s materials.</p>
 
@@ -112,21 +107,6 @@
         <div class="messages" id="messages"></div>
       </section>
 
-      <section class="student-panel" id="materialsPanel" hidden>
-        <div class="page-heading">
-          <div><p class="kicker">STUDENT-VISIBLE SOURCES</p><h1>Course materials</h1><p>Only approved, currently visible materials can support an answer.</p></div>
-          <span class="verified-pill">18 approved sources</span>
-        </div>
-        <div class="material-list">
-          <button class="material-row" type="button" data-open-source="memory"><span class="material-type purple">SLIDES</span><span><strong>Lecture 04 — Memory Systems</strong><small>Module 2 · Official · Updated Sep 18</small></span><span class="material-location">24 slides <b>↗</b></span></button>
-          <button class="material-row" type="button" data-open-source="assignment"><span class="material-type orange">PDF</span><span><strong>Assignment 3 — Research Critique</strong><small>Assignment 3 · Official · Visible now</small></span><span class="material-location">4 pages <b>↗</b></span></button>
-          <button class="material-row" type="button" data-open-source="rubric"><span class="material-type green">RUBRIC</span><span><strong>Research Critique Rubric</strong><small>Assignment 3 · Official · Visible now</small></span><span class="material-location">3 pages <b>↗</b></span></button>
-          <button class="material-row" type="button" data-open-source="exam"><span class="material-type blue">GUIDE</span><span><strong>Exam 2 Study Guide</strong><small>Module 3 · Official · Updated Oct 2</small></span><span class="material-location">2 pages <b>↗</b></span></button>
-          <button class="material-row" type="button" data-open-source="syllabus"><span class="material-type navy">PDF</span><span><strong>PSY 201 Course Syllabus</strong><small>Course policy · Primary authority · Version 2</small></span><span class="material-location">8 pages <b>↗</b></span></button>
-        </div>
-        <div class="governance-note"><strong>Why some files may not appear</strong><p>Draft, archived, or scheduled materials are excluded from student answers until your instructor publishes them.</p></div>
-      </section>
-
       <section class="student-panel" id="savedPanel" hidden>
         <div class="page-heading">
           <div><p class="kicker">YOUR STUDY LIBRARY</p><h1>Saved answers</h1><p>Keep useful explanations and return to their original evidence.</p></div>
@@ -139,9 +119,51 @@
 
       <section class="instructor-console" id="instructorConsole" hidden>
         <div class="console-heading">
-          <div><p class="kicker">INSTRUCTOR SAFETY WORKSPACE</p><h1>Test Console</h1><p>Preview exactly what a student will receive, which evidence was used, and which policy controlled the response.</p></div>
-          <span class="draft-badge">Draft course</span>
+          <div><p class="kicker">INSTRUCTOR WORKSPACE</p><h1 id="workspaceTitle">Course settings</h1><p id="workspaceDescription">Manage course identity, student access, and the default assistant policy.</p></div>
+          <span class="draft-badge" id="courseStatusBadge">Pilot course</span>
         </div>
+
+        <nav class="workspace-tabs" aria-label="Instructor workspace sections">
+          <button class="active" type="button" data-workspace="settings">Course settings</button>
+          <button type="button" data-workspace="materials">Materials <span id="materialCount">5</span></button>
+          <button type="button" data-workspace="test">Test Console</button>
+        </nav>
+
+        <div class="workspace-panel settings-panel" id="settingsWorkspace">
+          <form class="settings-card" id="courseSettingsForm">
+            <div class="section-heading"><div><h2>Course identity</h2><p>This information identifies the course throughout the student and instructor experience.</p></div><span class="settings-state">Saved</span></div>
+            <div class="field-grid">
+              <label>Course code<input id="settingCode" value="PSY 201" required /></label>
+              <label>Course name<input id="settingName" value="Cognitive Psychology" required /></label>
+              <label>Term<input id="settingTerm" value="Fall 2026" required /></label>
+              <label>Instructor<input id="settingInstructor" value="Dr. Chen" required /></label>
+              <label>Class time<input id="settingClassTime" value="Tue &amp; Thu · 10:00–11:15 AM" required /></label>
+            </div>
+            <div class="settings-row"><div><strong>Student access code</strong><p>Students join only this course with its invitation link or code.</p></div><code id="accessCode">PSY201-F26</code><button type="button" id="copyAccessCode">Copy</button></div>
+            <div class="settings-row"><div><strong>Default assignment help</strong><p>The more restrictive material-level policy always wins.</p></div><select id="defaultHelp"><option>Explain</option><option selected>Hint only</option><option>Source only</option><option>Blocked</option></select></div>
+            <div class="form-actions"><button class="primary" type="submit">Save course settings</button></div>
+          </form>
+
+          <aside class="course-summary-card">
+            <span class="eyebrow">ACTIVE COURSE</span><div class="summary-monogram" id="summaryMonogram">PS</div><h2 id="summaryCode">PSY 201</h2><p id="summaryName">Cognitive Psychology</p>
+            <dl><div><dt>Term</dt><dd id="summaryTerm">Fall 2026</dd></div><div><dt>Class time</dt><dd id="summaryClassTime">Tue &amp; Thu · 10:00–11:15 AM</dd></div><div><dt>Students</dt><dd>34 joined</dd></div><div><dt>Assistant status</dt><dd class="ready-text">Ready for pilot</dd></div></dl>
+            <button type="button" id="openCourseSwitcher">Switch course</button>
+          </aside>
+        </div>
+
+        <div class="workspace-panel" id="materialsWorkspace" hidden>
+          <div class="materials-toolbar"><div><h2>Knowledge materials</h2><p>Students never see this library. Prototype uploads are listed here, but their document text is not analyzed until the backend is connected.</p></div><button class="primary-action" type="button" id="uploadMaterialButton">Upload materials</button><input id="materialFileInput" type="file" multiple accept=".pdf,.docx,.pptx,.txt,.md" hidden /></div>
+          <div class="privacy-callout"><strong>Private by default</strong><p>New uploads start as Instructor-only. Change access only after processing and review.</p><div class="visibility-key"><span><i class="student-visible"></i>Student-visible</span><span><i class="citation-only"></i>Citation-only</span><span><i class="instructor-only"></i>Instructor-only</span></div></div>
+          <div class="instructor-material-list" id="instructorMaterialList">
+            <article class="instructor-material" data-material-id="syllabus"><span class="material-type navy">PDF</span><div><strong>PSY 201 Course Syllabus</strong><small>Syllabus · Official authority · 8 pages</small></div><span class="process-status ready">Ready</span><label>Student access<select data-visibility><option selected>Student-visible</option><option>Citation-only</option><option>Instructor-only</option></select></label><button type="button" data-material-menu aria-label="Material options">•••</button></article>
+            <article class="instructor-material" data-material-id="memory"><span class="material-type purple">SLIDES</span><div><strong>Lecture 04 — Memory Systems</strong><small>Lecture · Module 2 · 24 slides</small></div><span class="process-status ready">Ready</span><label>Student access<select data-visibility><option>Student-visible</option><option selected>Citation-only</option><option>Instructor-only</option></select></label><button type="button" data-material-menu aria-label="Material options">•••</button></article>
+            <article class="instructor-material" data-material-id="script"><span class="material-type orange">DOCX</span><div><strong>Lecture 04 Instructor Script</strong><small>Instructor notes · 14 pages · Original hidden</small></div><span class="process-status ready">Ready</span><label>Student access<select data-visibility><option>Student-visible</option><option>Citation-only</option><option selected>Instructor-only</option></select></label><button type="button" data-material-menu aria-label="Material options">•••</button></article>
+            <article class="instructor-material" data-material-id="assignment"><span class="material-type green">PDF</span><div><strong>Assignment 3 — Research Critique</strong><small>Assignment · Official · 4 pages</small></div><span class="process-status ready">Ready</span><label>Student access<select data-visibility><option selected>Student-visible</option><option>Citation-only</option><option>Instructor-only</option></select></label><button type="button" data-material-menu aria-label="Material options">•••</button></article>
+            <article class="instructor-material" data-material-id="answer-key"><span class="material-type red">PDF</span><div><strong>Assignment 3 Answer Key</strong><small>Restricted assessment material · 3 pages</small></div><span class="process-status ready">Ready</span><label>Student access<select data-visibility><option disabled>Student-visible</option><option disabled>Citation-only</option><option selected>Instructor-only</option></select></label><button type="button" data-material-menu aria-label="Material options">•••</button></article>
+          </div>
+        </div>
+
+        <div class="workspace-panel" id="testWorkspace" hidden>
 
         <div class="console-question">
           <label for="testQuestion">Student question</label>
@@ -164,6 +186,7 @@
             <section><div class="diagnostic-title"><span>Retrieved evidence</span><small id="passageCount">2 passages</small></div><div class="passage used"><span>USED · 0.93</span><p>“You may use AI to clarify concepts, but submitted SQL must be your own…”</p><small>Assignment 3, p. 2</small></div><div class="passage"><span>SUPPORTING · 0.81</span><p>“Office hours include query debugging and conceptual guidance.”</p><small>Syllabus, p. 6</small></div></section>
             <section id="conflictPanel" hidden><div class="diagnostic-title"><span>Conflicting evidence</span><span class="state conflict">CONFLICT</span></div><p>Two currently visible sources give different late-work deadlines. Instructor confirmation is required.</p></section>
           </aside>
+        </div>
         </div>
       </section>
 
@@ -189,11 +212,22 @@
       <h3 id="sourceHeading">Working memory</h3>
       <p id="sourceText">A limited-capacity system for temporarily holding and actively manipulating information needed for complex cognitive tasks.</p>
       <mark id="sourceHighlight">Working memory involves both storage and active processing.</mark>
+      <p class="source-privacy-note" id="sourcePrivacyNote" hidden>This citation uses an instructor-provided excerpt. The original file is not shared with students.</p>
     </div>
     <div class="dialog-actions">
       <button type="button" id="closeDialogSecondary">Back to answer</button>
-      <button type="button" class="primary">Open original PDF ↗</button>
+      <button type="button" class="primary" id="sourceOriginalButton">Open original source ↗</button>
     </div>
+  </dialog>
+
+  <dialog class="course-dialog" id="courseDialog">
+    <div class="dialog-top"><div><span class="eyebrow">YOUR COURSES</span><h2>Switch course</h2></div><button type="button" id="closeCourseDialog" aria-label="Close course switcher">×</button></div>
+    <div class="course-options" id="courseOptions">
+      <button class="active" type="button" data-course="psy201"><span class="course-option-monogram">PS</span><span><strong>PSY 201</strong><small>Cognitive Psychology · Fall 2026</small></span><b>Current</b></button>
+      <button type="button" data-course="cis222"><span class="course-option-monogram blue-option">CI</span><span><strong>CIS 222</strong><small>Business Analytics · Fall 2026</small></span><b>Switch</b></button>
+      <button type="button" data-course="cis490"><span class="course-option-monogram green-option">AI</span><span><strong>CIS 490</strong><small>AI Capstone · Winter 2027</small></span><b>Switch</b></button>
+    </div>
+    <div class="course-dialog-actions"><button type="button" id="createCourseButton">＋ Create another course</button></div>
   </dialog>
 
   <dialog class="feedback-dialog" id="feedbackDialog">

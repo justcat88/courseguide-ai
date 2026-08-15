@@ -4,10 +4,17 @@ const welcome = document.querySelector('#welcome');
 const messages = document.querySelector('#messages');
 const sourceDialog = document.querySelector('#sourceDialog');
 const toast = document.querySelector('#toast');
-const materialsPanel = document.querySelector('#materialsPanel');
 const savedPanel = document.querySelector('#savedPanel');
 const savedList = document.querySelector('#savedList');
 const savedAnswers = [];
+const courseDialog = document.querySelector('#courseDialog');
+
+const courses = {
+  psy201: { code: 'PSY 201', name: 'Cognitive Psychology', term: 'Fall 2026', instructor: 'Dr. Chen', classTime: 'Tue & Thu · 10:00–11:15 AM', monogram: 'PS', accessCode: 'PSY201-F26', students: 34 },
+  cis222: { code: 'CIS 222', name: 'Business Analytics', term: 'Fall 2026', instructor: 'Prof. Baek', classTime: 'Mon & Wed · 2:00–3:15 PM', monogram: 'CI', accessCode: 'CIS222-F26', students: 41 },
+  cis490: { code: 'CIS 490', name: 'AI Capstone', term: 'Winter 2027', instructor: 'Prof. Baek', classTime: 'Friday · 1:00–3:30 PM', monogram: 'AI', accessCode: 'CIS490-W27', students: 18 }
+};
+let activeCourseKey = 'psy201';
 
 const icon = (name) => {
   const paths = {
@@ -20,42 +27,113 @@ const icon = (name) => {
   return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name]}</svg>`;
 };
 
+const escapeHtml = value => String(value).replace(/[&<>"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[character]));
+
 const sources = {
   memory: {
     title: 'Lecture 04 — Memory Systems', location: 'Slide 12', heading: 'Working memory',
     text: 'A limited-capacity system for temporarily holding and actively manipulating information needed for complex cognitive tasks.',
-    highlight: 'Working memory involves both storage and active processing.'
+    highlight: 'Working memory involves both storage and active processing.', visibility: 'Citation-only'
   },
   assignment: {
     title: 'Assignment 3 — Research Critique', location: 'Page 1 · Submission', heading: 'Due date & submission',
     text: 'Submit one PDF through Canvas by the deadline. Include your critique, references, and completed article-analysis table.',
-    highlight: 'Due Friday, October 16 at 11:59 PM ET.'
+    highlight: 'Due Friday, October 16 at 11:59 PM ET.', visibility: 'Student-visible'
   },
   rubric: {
     title: 'Research Critique Rubric', location: 'Page 2 · Grading criteria', heading: 'Evaluation criteria',
     text: 'The critique is assessed across four areas: summary, methodological analysis, use of evidence, and clarity of writing.',
-    highlight: 'Methodological analysis carries the greatest weight at 40%.'
+    highlight: 'Methodological analysis carries the greatest weight at 40%.', visibility: 'Student-visible'
   },
   exam: {
     title: 'Exam 2 Study Guide', location: 'Page 1 · Scope', heading: 'What to review',
     text: 'Exam 2 covers attention, working memory, long-term memory, and retrieval from Lectures 4–7 and the assigned readings.',
-    highlight: 'Focus on comparing models and applying them to short scenarios.'
+    highlight: 'Focus on comparing models and applying them to short scenarios.', visibility: 'Student-visible'
   },
   syllabus: {
     title: 'PSY 201 Course Syllabus', location: 'Page 5 · Course policies', heading: 'Getting help',
     text: 'Questions involving personal circumstances or exceptions to course policy must be directed to the instructor.',
-    highlight: 'Email Dr. Chen or visit office hours for individual policy questions.'
+    highlight: 'Email Dr. Chen or visit office hours for individual policy questions.', visibility: 'Student-visible'
+  },
+  sql: {
+    title: 'Lecture 05 — Joining Data', location: 'Slide 9', heading: 'INNER JOIN and LEFT JOIN',
+    text: 'An INNER JOIN keeps matching rows from both tables. A LEFT JOIN keeps every row from the left table and matching rows from the right table.',
+    highlight: 'Choose the join based on which unmatched records must remain in the result.', visibility: 'Citation-only'
+  },
+  sqlAssignment: {
+    title: 'Assignment 3 — SQL Analysis', location: 'Page 2 · AI help policy', heading: 'Permitted assistance',
+    text: 'Students may receive conceptual explanations and error-localization help, but submitted SQL must be their own work.',
+    highlight: 'Completed queries are not permitted for this assignment.', visibility: 'Student-visible'
+  },
+  capstone: {
+    title: 'AI Capstone Project Guide', location: 'Page 3 · Proposal', heading: 'Proposal requirements',
+    text: 'The proposal defines the user problem, evidence source, evaluation plan, and a scoped prototype milestone.',
+    highlight: 'Submit the two-page proposal before beginning implementation.', visibility: 'Student-visible'
   }
 };
 
+const coursePromptSets = {
+  psy201: [
+    ['Explain a concept', 'Working memory vs. short-term memory', 'What is the difference between working memory and short-term memory?'],
+    ['Check a deadline', 'Assignment 3 due date and requirements', 'When is Assignment 3 due, and what do I need to submit?'],
+    ['Understand grading', 'Research critique rubric', 'How will the research critique be graded?'],
+    ['Prepare for class', 'What to review before the next exam', 'What should I review before the next exam?']
+  ],
+  cis222: [
+    ['Explain a concept', 'INNER JOIN vs. LEFT JOIN', 'What is the difference between an INNER JOIN and a LEFT JOIN?'],
+    ['Check a deadline', 'SQL analysis submission', 'When is the SQL analysis due?'],
+    ['Understand a policy', 'Allowed AI help for Assignment 3', 'Can AI write my Assignment 3 SQL query?'],
+    ['Prepare for class', 'What to practice before the SQL lab', 'What should I practice before the SQL lab?']
+  ],
+  cis490: [
+    ['Plan the project', 'Scope a useful AI prototype', 'How should I scope my AI prototype?'],
+    ['Check a deadline', 'Capstone proposal requirements', 'What is required in the capstone proposal?'],
+    ['Understand grading', 'Prototype evaluation rubric', 'How will the capstone prototype be evaluated?'],
+    ['Prepare for class', 'What to bring to design review', 'What should I prepare for the design review?']
+  ]
+};
+
+const materialsByCourse = {
+  psy201: [
+    { id: 'syllabus', type: 'PDF', tone: 'navy', title: 'PSY 201 Course Syllabus', meta: 'Syllabus · Official authority · 8 pages', visibility: 'Student-visible' },
+    { id: 'memory', type: 'SLIDES', tone: 'purple', title: 'Lecture 04 — Memory Systems', meta: 'Lecture · Module 2 · 24 slides', visibility: 'Citation-only' },
+    { id: 'script', type: 'DOCX', tone: 'orange', title: 'Lecture 04 Instructor Script', meta: 'Instructor notes · 14 pages · Original hidden', visibility: 'Instructor-only' },
+    { id: 'assignment', type: 'PDF', tone: 'green', title: 'Assignment 3 — Research Critique', meta: 'Assignment · Official · 4 pages', visibility: 'Student-visible' },
+    { id: 'answer-key', type: 'PDF', tone: 'red', title: 'Assignment 3 Answer Key', meta: 'Restricted assessment material · 3 pages', visibility: 'Instructor-only', locked: true }
+  ],
+  cis222: [
+    { id: 'cis-syllabus', type: 'PDF', tone: 'navy', title: 'CIS 222 Course Syllabus', meta: 'Syllabus · Official authority · 9 pages', visibility: 'Student-visible' },
+    { id: 'sql', type: 'SLIDES', tone: 'purple', title: 'Lecture 05 — Joining Data', meta: 'Lecture · Module 3 · 28 slides', visibility: 'Citation-only' },
+    { id: 'sql-assignment', type: 'PDF', tone: 'green', title: 'Assignment 3 — SQL Analysis', meta: 'Assignment · Official · 5 pages', visibility: 'Student-visible' },
+    { id: 'sql-key', type: 'SQL', tone: 'red', title: 'Assignment 3 Reference Solution', meta: 'Restricted answer key · Original hidden', visibility: 'Instructor-only', locked: true }
+  ],
+  cis490: [
+    { id: 'capstone-syllabus', type: 'PDF', tone: 'navy', title: 'CIS 490 Course Syllabus', meta: 'Syllabus · Official authority · 7 pages', visibility: 'Student-visible' },
+    { id: 'capstone', type: 'PDF', tone: 'green', title: 'AI Capstone Project Guide', meta: 'Project guide · Official · 12 pages', visibility: 'Student-visible' },
+    { id: 'planning-notes', type: 'DOCX', tone: 'orange', title: 'Instructor Planning Notes', meta: 'Internal teaching notes · Original hidden', visibility: 'Instructor-only' },
+    { id: 'rubric-capstone', type: 'PDF', tone: 'purple', title: 'Prototype Evaluation Rubric', meta: 'Rubric · Official · 4 pages', visibility: 'Citation-only' }
+  ]
+};
+
+function getSource(key) {
+  if (key === 'courseProfile') {
+    const course = courses[activeCourseKey];
+    return { title: `${course.code} Course Settings`, location: 'Official course metadata', heading: course.name, text: `Instructor: ${course.instructor}. Class time: ${course.classTime}. Term: ${course.term}.`, highlight: `${course.instructor} · ${course.classTime}`, visibility: 'Student-visible' };
+  }
+  return sources[key];
+}
+
 function openSource(key) {
-  const source = sources[key];
+  const source = getSource(key);
   if (!source) return;
   document.querySelector('#sourceTitle').textContent = source.title;
   document.querySelector('#sourceLocation').textContent = source.location;
   document.querySelector('#sourceHeading').textContent = source.heading;
   document.querySelector('#sourceText').textContent = source.text;
   document.querySelector('#sourceHighlight').textContent = source.highlight;
+  const citationOnly = source.visibility === 'Citation-only';
+  document.querySelector('#sourcePrivacyNote').hidden = !citationOnly;
+  document.querySelector('#sourceOriginalButton').hidden = citationOnly;
   sourceDialog.showModal();
 }
 
@@ -65,6 +143,22 @@ function citation(label, key) {
 
 function answerFor(question) {
   const q = question.toLowerCase();
+  const activeCourse = courses[activeCourseKey];
+  if (/professor|instructor|teacher|who teaches|교수|담당/.test(q)) {
+    return `<p><strong>${activeCourse.instructor}</strong> is the instructor for ${activeCourse.code} — ${activeCourse.name}. ${citation('Course settings · instructor', 'courseProfile')}</p>`;
+  }
+  if (/class time|meeting time|when.*class|what time|schedule|수업 시간|강의 시간|몇 시/.test(q)) {
+    return `<p>${activeCourse.code} meets <strong>${activeCourse.classTime}</strong>. ${citation('Course settings · class time', 'courseProfile')}</p>`;
+  }
+  if (activeCourseKey === 'cis222') {
+    if (/join|inner|left/.test(q)) return `<p>An <strong>INNER JOIN</strong> returns rows with matching keys in both tables. A <strong>LEFT JOIN</strong> keeps every row from the left table, even when no match exists on the right. ${citation('Lecture 05 · slide 9', 'sql')}</p><p>Start by asking whether unmatched records from your primary table must remain. If yes, use a LEFT JOIN; otherwise an INNER JOIN may be appropriate. ${citation('Lecture 05 · slides 9–11', 'sql')}</p>`;
+    if (/ai|write|query|assignment 3/.test(q)) return `<div class="escalation"><strong>Direct query generation is restricted for Assignment 3.</strong><br>I can explain the relevant SQL concept, identify the next step, or help locate an error, but the submitted query must be your own.</div>`;
+    if (/due|deadline|submit/.test(q)) return `<p>The SQL analysis is due <strong>Friday at 11:59 PM ET</strong>. Submit the SQL file and exported results through Canvas.</p>`;
+  }
+  if (activeCourseKey === 'cis490') {
+    if (/proposal|required|scope|prototype/.test(q)) return `<p>Your proposal should define the <strong>user problem, evidence source, evaluation plan, and a scoped prototype milestone</strong>. Keep it to two pages. ${citation('Capstone guide · p. 3', 'capstone')}</p><p>The project guide recommends proving one complete user workflow before adding secondary features. ${citation('Capstone guide · p. 4', 'capstone')}</p>`;
+    if (/design review|prepare|class/.test(q)) return `<p>Bring a one-sentence problem statement, your primary user flow, and one testable success measure to the design review. ${citation('Capstone guide · p. 3', 'capstone')}</p>`;
+  }
   if (/working memory|short-term|short term/.test(q)) {
     return `<p><strong>Short-term memory</strong> is the temporary storage of a small amount of information, while <strong>working memory</strong> includes both temporary storage and the active manipulation of that information. ${citation('Lecture 04 · slide 12', 'memory')}</p><p>For example, holding a phone number in mind uses short-term storage. Mentally rearranging those digits while following a rule uses working memory. Dr. Chen’s slides describe working memory as a limited-capacity system that supports complex tasks such as reasoning and comprehension. ${citation('Lecture 04 · slides 12–14', 'memory')}</p><h3>A useful distinction</h3><ul><li><strong>Short-term memory:</strong> “holding” information briefly. ${citation('Lecture 04 · slide 11', 'memory')}</li><li><strong>Working memory:</strong> holding <em>and working with</em> information. ${citation('Lecture 04 · slide 12', 'memory')}</li></ul>`;
   }
@@ -78,9 +172,9 @@ function answerFor(question) {
     return `<p>For Exam 2, review <strong>attention, working memory, long-term memory, and retrieval</strong> from Lectures 4–7 and the corresponding assigned readings. ${citation('Exam 2 study guide · p. 1', 'exam')}</p><p>Prioritize comparing the major models and applying them to short scenarios. The guide says the exam includes 30 multiple-choice questions and two short responses. ${citation('Exam 2 study guide · pp. 1–2', 'exam')}</p>`;
   }
   if (/extension|exception|personal|accommodation|late/.test(q)) {
-    return `<div class="escalation"><strong>I can’t safely decide that from the course materials.</strong><br>This question may require an individual exception or involve personal circumstances. Please email Dr. Chen or ask during office hours. The syllabus directs individual policy questions to the instructor. ${citation('Syllabus · p. 5', 'syllabus')}</div>`;
+    return `<div class="escalation"><strong>I can’t safely decide that from the course materials.</strong><br>This question may require an individual exception or involve personal circumstances. Please contact ${courses[activeCourseKey].instructor} or ask during office hours. The course policy directs individual exceptions to the instructor. ${citation('Course policy · individual exceptions', 'syllabus')}</div>`;
   }
-  return `<p>I couldn’t find a reliable answer to that question in the student-visible course materials. I don’t want to guess.</p><div class="escalation"><strong>This needs instructor guidance.</strong><br>Please send this question to Dr. Chen. You can also rephrase it with the name of a lecture, assignment, or course policy so I can search the approved materials more precisely. ${citation('Syllabus · p. 5', 'syllabus')}</div>`;
+  return `<p>I couldn’t find a reliable answer to that question in the approved evidence for this course. I don’t want to guess.</p><div class="escalation"><strong>This needs instructor guidance.</strong><br>Please send this question to ${courses[activeCourseKey].instructor}. You can also rephrase it with the name of a lecture, assignment, or course policy so I can search more precisely.</div>`;
 }
 
 function addUserMessage(text) {
@@ -215,11 +309,15 @@ function runTest() {
   } else if (/due|when/.test(q)) {
     state.className = 'state answer'; state.textContent = 'ANSWER'; policyLevel.textContent = 'EXPLAIN';
     policyText.innerHTML = '<strong>Course information default</strong><br>Brief direct answers are allowed when supported by a visible official source.';
-    answer.innerHTML = `<p>Assignment 3 is due <strong>Friday, October 16 at 11:59 PM ET</strong>. Submit one PDF through Canvas.</p>${citation('Assignment 3 · p. 1', 'assignment')}`;
+    if (activeCourseKey === 'cis222') answer.innerHTML = `<p>The SQL analysis is due <strong>Friday at 11:59 PM ET</strong>. Submit the SQL file and exported results through Canvas.</p>${citation('Assignment 3 · p. 1', 'sqlAssignment')}`;
+    else if (activeCourseKey === 'cis490') answer.innerHTML = `<p>The capstone proposal is due before the first design review and must be no more than two pages.</p>${citation('Capstone guide · p. 3', 'capstone')}`;
+    else answer.innerHTML = `<p>Assignment 3 is due <strong>Friday, October 16 at 11:59 PM ET</strong>. Submit one PDF through Canvas.</p>${citation('Assignment 3 · p. 1', 'assignment')}`;
   } else {
     state.className = 'state restricted'; state.textContent = 'RESTRICTED'; policyLevel.textContent = 'HINT ONLY';
-    policyText.innerHTML = '<strong>Assignment 3 override</strong><br>Concept explanation and error localization are allowed. Completed queries are prohibited.';
-    answer.innerHTML = `<p>I can help you understand the SQL concepts and identify the next step, but I can’t provide a completed query for this assignment.</p><p>Start by identifying the two tables you need to join and the column they share. Then decide which rows your <code>WHERE</code> clause should keep.</p>${citation('Assignment 3 · p. 2', 'assignment')}`;
+    policyText.innerHTML = activeCourseKey === 'cis222' ? '<strong>Assignment 3 override</strong><br>Concept explanation and error localization are allowed. Completed queries are prohibited.' : activeCourseKey === 'cis490' ? '<strong>Capstone submission policy</strong><br>Planning and feedback are allowed. A completed proposal is prohibited.' : '<strong>Research critique policy</strong><br>Explanation and planning are allowed. A completed critique is prohibited.';
+    if (activeCourseKey === 'cis222') answer.innerHTML = `<p>I can help you understand the SQL concepts and identify the next step, but I can’t provide a completed query for this assignment.</p><p>Start by identifying the two tables you need to join and the column they share. Then decide which rows your <code>WHERE</code> clause should keep.</p>${citation('Assignment 3 · p. 2', 'sqlAssignment')}`;
+    else if (activeCourseKey === 'cis490') answer.innerHTML = `<p>I can help you improve the proposal structure, but I can’t write a completed capstone proposal for submission.</p><p>Start with the user problem, evidence source, and one testable success measure.</p>${citation('Capstone guide · p. 3', 'capstone')}`;
+    else answer.innerHTML = `<p>I can explain the critique requirements and help you plan, but I can’t write a completed submission.</p><p>Start by identifying one methodological strength and one limitation, then connect each to evidence from the article.</p>${citation('Assignment 3 · p. 2', 'assignment')}`;
   }
   showToast('Student preview updated');
 }
@@ -234,10 +332,9 @@ function switchStudentView(view) {
   const isChat = view === 'chat';
   conversation.hidden = !isChat;
   composerWrap.hidden = !isChat;
-  materialsPanel.hidden = view !== 'materials';
   savedPanel.hidden = view !== 'saved';
   document.querySelector('#newChat').hidden = !isChat || instructorMode;
-  document.querySelector('#viewLabel').textContent = view === 'materials' ? 'Course materials' : view === 'saved' ? 'Saved answers' : 'Course assistant';
+  document.querySelector('#viewLabel').textContent = view === 'saved' ? 'Saved answers' : 'Course assistant';
   document.querySelectorAll('[data-view]').forEach(item => {
     const active = item.dataset.view === view;
     item.classList.toggle('active', active);
@@ -248,7 +345,7 @@ function switchStudentView(view) {
 function renderSavedAnswers() {
   document.querySelector('#savedCount').textContent = `${savedAnswers.length} saved`;
   if (!savedAnswers.length) return;
-  savedList.innerHTML = savedAnswers.map((item, index) => `<article class="saved-card"><div><p>${item.summary}</p><small>${item.savedAt}${item.sourceKey ? ` · ${sources[item.sourceKey].title}` : ''}</small></div>${item.sourceKey ? `<button type="button" data-saved-source="${item.sourceKey}">Open source</button>` : ''}</article>`).join('');
+  savedList.innerHTML = savedAnswers.map(item => `<article class="saved-card"><div><p>${item.summary}</p><small>${item.savedAt}${item.sourceKey ? ` · ${getSource(item.sourceKey).title}` : ''}</small></div>${item.sourceKey ? `<button type="button" data-saved-source="${item.sourceKey}">Open source</button>` : ''}</article>`).join('');
 }
 
 document.querySelectorAll('[data-view]').forEach(item => item.addEventListener('click', event => {
@@ -261,12 +358,130 @@ document.querySelectorAll('[data-view]').forEach(item => item.addEventListener('
   switchStudentView(item.dataset.view);
   if (window.innerWidth <= 760) sidebar.classList.remove('open');
 }));
-document.querySelectorAll('[data-open-source]').forEach(item => item.addEventListener('click', () => openSource(item.dataset.openSource)));
 savedPanel.addEventListener('click', event => {
   const sourceButton = event.target.closest('[data-saved-source]');
   if (sourceButton) openSource(sourceButton.dataset.savedSource);
   if (event.target.closest('[data-return-chat]')) switchStudentView('chat');
 });
+
+const workspaceMeta = {
+  settings: ['Course settings', 'Manage course identity, student access, and the default assistant policy.'],
+  materials: ['Materials', 'Upload knowledge, review processing, and control what students can see.'],
+  test: ['Test Console', 'Preview the exact student answer, supporting evidence, and active policy.']
+};
+
+function switchWorkspace(view) {
+  document.querySelector('#settingsWorkspace').hidden = view !== 'settings';
+  document.querySelector('#materialsWorkspace').hidden = view !== 'materials';
+  document.querySelector('#testWorkspace').hidden = view !== 'test';
+  document.querySelector('#workspaceTitle').textContent = workspaceMeta[view][0];
+  document.querySelector('#workspaceDescription').textContent = workspaceMeta[view][1];
+  document.querySelectorAll('[data-workspace]').forEach(button => button.classList.toggle('active', button.dataset.workspace === view));
+}
+
+document.querySelectorAll('[data-workspace]').forEach(button => button.addEventListener('click', () => switchWorkspace(button.dataset.workspace)));
+
+function renderCourseMaterials() {
+  const list = document.querySelector('#instructorMaterialList');
+  const materials = materialsByCourse[activeCourseKey];
+  list.innerHTML = materials.map(material => {
+    const publicDisabled = material.locked ? 'disabled' : '';
+    return `<article class="instructor-material" data-material-id="${escapeHtml(material.id)}"><span class="material-type ${material.tone}">${escapeHtml(material.type)}</span><div><strong>${escapeHtml(material.title)}</strong><small>${escapeHtml(material.meta)}</small></div><span class="process-status ${material.status === 'Processing' ? 'processing' : 'ready'}">${material.status || 'Ready'}</span><label>Student access<select data-visibility ${material.locked ? 'aria-label="Student access — locked"' : ''}><option ${publicDisabled} ${material.visibility === 'Student-visible' ? 'selected' : ''}>Student-visible</option><option ${publicDisabled} ${material.visibility === 'Citation-only' ? 'selected' : ''}>Citation-only</option><option ${material.visibility === 'Instructor-only' ? 'selected' : ''}>Instructor-only</option></select></label><button type="button" data-material-menu aria-label="Material options">•••</button></article>`;
+  }).join('');
+  document.querySelector('#materialCount').textContent = materials.length;
+}
+
+function applyCourse(key) {
+  const course = courses[key];
+  if (!course) return;
+  activeCourseKey = key;
+  document.querySelector('#courseMonogram').textContent = course.monogram;
+  document.querySelector('#courseCode').textContent = course.code;
+  document.querySelector('#courseName').textContent = course.name;
+  document.querySelector('#courseKicker').textContent = `${course.code} · ${course.term.toUpperCase()}`;
+  input.placeholder = `Ask a question about ${course.code}…`;
+  document.querySelector('#testQuestion').value = key === 'cis222' ? 'Can you write the SQL query for Assignment 3?' : key === 'cis490' ? 'Can you write my capstone proposal?' : 'Can you write my Assignment 3 critique?';
+  document.querySelector('#settingCode').value = course.code;
+  document.querySelector('#settingName').value = course.name;
+  document.querySelector('#settingTerm').value = course.term;
+  document.querySelector('#settingInstructor').value = course.instructor;
+  document.querySelector('#settingClassTime').value = course.classTime;
+  document.querySelector('#accessCode').textContent = course.accessCode;
+  document.querySelector('#summaryMonogram').textContent = course.monogram;
+  document.querySelector('#summaryCode').textContent = course.code;
+  document.querySelector('#summaryName').textContent = course.name;
+  document.querySelector('#summaryTerm').textContent = course.term;
+  document.querySelector('#summaryClassTime').textContent = course.classTime;
+  document.querySelector('#trustText').textContent = `Answers use only evidence approved by ${course.instructor}.`;
+  document.querySelectorAll('#courseOptions [data-course]').forEach(button => {
+    const active = button.dataset.course === key;
+    const optionCourse = courses[button.dataset.course];
+    button.querySelector('strong').textContent = optionCourse.code;
+    button.querySelector('small').textContent = `${optionCourse.name} · ${optionCourse.term}`;
+    button.classList.toggle('active', active);
+    button.querySelector('b').textContent = active ? 'Current' : 'Switch';
+  });
+  document.querySelectorAll('.prompt-card').forEach((button, index) => {
+    const prompt = coursePromptSets[key][index];
+    button.dataset.question = prompt[2];
+    button.querySelector('strong').textContent = prompt[0];
+    button.querySelector('small').textContent = prompt[1];
+  });
+  const testExamples = key === 'cis222' ? [['Course info', 'When is Assignment 3 due?'], ['Restricted help', 'Can you write the SQL query for Assignment 3?'], ['Source conflict', 'Is the late policy different in the announcement?']] : key === 'cis490' ? [['Course info', 'When is the capstone proposal due?'], ['Restricted help', 'Can you write my capstone proposal?'], ['Source conflict', 'Do the project guide and announcement disagree?']] : [['Course info', 'When is Assignment 3 due?'], ['Restricted help', 'Can you write my Assignment 3 critique?'], ['Source conflict', 'Is the late policy different in the announcement?']];
+  document.querySelectorAll('[data-test]').forEach((button, index) => { button.textContent = testExamples[index][0]; button.dataset.test = testExamples[index][1]; });
+  renderCourseMaterials();
+  messages.replaceChildren(); messages.classList.remove('active'); welcome.hidden = false;
+  showToast(`${course.code} selected`);
+}
+
+document.querySelector('#courseButton').addEventListener('click', () => courseDialog.showModal());
+document.querySelector('#openCourseSwitcher').addEventListener('click', () => courseDialog.showModal());
+document.querySelector('#closeCourseDialog').addEventListener('click', () => courseDialog.close());
+document.querySelectorAll('#courseOptions [data-course]').forEach(button => button.addEventListener('click', () => { applyCourse(button.dataset.course); courseDialog.close(); }));
+document.querySelector('#createCourseButton').addEventListener('click', () => showToast('New course setup will open here'));
+
+document.querySelector('#courseSettingsForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const course = courses[activeCourseKey];
+  course.code = document.querySelector('#settingCode').value.trim();
+  course.name = document.querySelector('#settingName').value.trim();
+  course.term = document.querySelector('#settingTerm').value.trim();
+  course.instructor = document.querySelector('#settingInstructor').value.trim();
+  course.classTime = document.querySelector('#settingClassTime').value.trim();
+  applyCourse(activeCourseKey);
+  document.querySelector('.settings-state').textContent = 'Saved just now';
+  showToast('Course settings saved');
+});
+
+document.querySelector('#copyAccessCode').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(document.querySelector('#accessCode').textContent); showToast('Access code copied'); }
+  catch { showToast('Access code ready to copy'); }
+});
+
+const materialInput = document.querySelector('#materialFileInput');
+document.querySelector('#uploadMaterialButton').addEventListener('click', () => materialInput.click());
+materialInput.addEventListener('change', () => {
+  const files = [...materialInput.files];
+  const uploadCourseKey = activeCourseKey;
+  files.forEach(file => {
+    const extension = file.name.split('.').pop().toUpperCase().slice(0, 6);
+    materialsByCourse[uploadCourseKey].unshift({ id: `upload-${Date.now()}-${file.name}`, type: extension, tone: 'orange', title: file.name, meta: 'New upload · Private by default', visibility: 'Instructor-only', status: 'Processing' });
+  });
+  renderCourseMaterials();
+  window.setTimeout(() => { materialsByCourse[uploadCourseKey].forEach(material => { if (material.status === 'Processing') material.status = 'Ready'; }); if (activeCourseKey === uploadCourseKey) renderCourseMaterials(); }, 1200);
+  materialInput.value = '';
+  showToast(`${files.length} material${files.length === 1 ? '' : 's'} added as Instructor-only`);
+});
+
+document.querySelector('#instructorMaterialList').addEventListener('change', event => {
+  if (!event.target.matches('[data-visibility]')) return;
+  const id = event.target.closest('[data-material-id]').dataset.materialId;
+  const material = materialsByCourse[activeCourseKey].find(item => item.id === id);
+  if (material) material.visibility = event.target.value;
+  showToast(`Access changed to ${event.target.value}`);
+});
+
+renderCourseMaterials();
 
 const sidebar = document.querySelector('#sidebar');
 const menuButton = document.querySelector('#menuButton');
